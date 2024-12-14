@@ -18,6 +18,9 @@ $(ODIR)/main: $(OBJS)
 run: $(ODIR)/main
 	./$^
 
+memrun: $(ODIR)/main
+	leaks -atExit -- ./$^
+
 clean:
 	rm -f $(ODIR)/*
 
