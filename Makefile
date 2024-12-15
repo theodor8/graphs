@@ -22,6 +22,6 @@ memrun: $(ODIR)/main
 	leaks -atExit -- ./$^
 
 clean:
-	rm -f $(ODIR)/*
+	rm -f $(ODIR)/*.o $(ODIR)/main
 
 .PHONY: clean run

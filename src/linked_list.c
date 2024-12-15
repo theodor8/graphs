@@ -1,6 +1,7 @@
 #include "linked_list.h"
 
 #include <stdlib.h>
+#include <stdbool.h>
 #include <assert.h>
 
 
@@ -12,7 +13,7 @@ struct node
     node_t *next;
 };
 
-node_t *node_create(void *elem, node_t *next)
+static node_t *node_create(void *elem, node_t *next)
 {
     node_t *node = calloc(1, sizeof(node_t));
     node->elem = elem;
@@ -20,7 +21,7 @@ node_t *node_create(void *elem, node_t *next)
     return node;
 }
 
-void node_destroy(node_t *node)
+static void node_destroy(node_t *node)
 {
     free(node);
 }
@@ -73,6 +74,45 @@ void list_append(list_t *list, void *elem)
         list->first = list->last = node;
     }
     list->size++;
+}
+
+
+void *list_get_first(list_t *list)
+{
+    assert(list->first != NULL);
+    return list->first;
+}
+
+
+
+struct iter
+{
+    node_t *next;
+};
+
+iter_t *iter_create(list_t *list)
+{
+    iter_t *iter = calloc(1, sizeof(iter_t));
+    iter->next = list->first;
+    return iter;
+}
+
+void iter_destroy(iter_t *iter)
+{
+    free(iter);
+}
+
+bool iter_has_next(iter_t *iter)
+{
+    return iter->next != NULL;
+}
+
+void *iter_next(iter_t *iter)
+{
+    assert(iter->next != NULL);
+    void *elem = iter->next->elem;
+    iter->next = iter->next->next;
+    return elem;
 }
 
 
