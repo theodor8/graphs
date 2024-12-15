@@ -2,6 +2,7 @@
 
 #include "SDL2/SDL.h"
 
+#include "SDL2/SDL_render.h"
 #include "graph.h"
 #include "graph_vis.h"
 #include "linked_list.h"
@@ -94,10 +95,25 @@ int main(void)
         prev_ticks = curr_ticks;
 
 
+        graph_vis_update(gv, dt);
 
         SDL_SetRenderDrawColor(renderer, 200, 200, 200, 255);
         SDL_RenderClear(renderer);
-        SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+
+
+        list_t *gv_nodes = graph_vis_get_nodes(gv);
+        iter_t *gv_nodes_iter = iter_create(gv_nodes);
+        SDL_FRect rect = { .w = 20, .h = 20 };
+        while (iter_has_next(gv_nodes_iter))
+        {
+            graph_vis_node_t *gv_node = iter_next(gv_nodes_iter);
+            rect.x = gv_node->x * WIDTH;
+            rect.y = gv_node->y * HEIGHT;
+            SDL_RenderFillRectF(renderer, &rect);
+        }
+
+        iter_destroy(gv_nodes_iter);
 
 
         SDL_RenderPresent(renderer);
