@@ -1,8 +1,13 @@
 #include <stdio.h>
 
+#include "SDL2/SDL.h"
+
 #include "graph.h"
 #include "graph_vis.h"
 #include "linked_list.h"
+
+#define WIDTH 600
+#define HEIGHT 600
 
 
 void print_graph(graph_t *g)
@@ -29,8 +34,6 @@ void print_graph(graph_t *g)
 
 int main(void)
 {
-    printf("hejsan\n");
-
     graph_t *g = graph_create();
 
     graph_node_t *a = graph_add_node(g, "a");
@@ -44,12 +47,72 @@ int main(void)
     graph_add_edge(d, f);
 
     graph_vis_t *gv = graph_vis_create(g);
+
+
+
+    SDL_Window *window;
+    SDL_Renderer *renderer;
+    SDL_Init(SDL_INIT_VIDEO);
+    SDL_CreateWindowAndRenderer(WIDTH, HEIGHT, 0, &window, &renderer);
+    SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+
+    Uint64 prev_ticks = SDL_GetTicks64();
+    bool quit = false;
+    while (!quit)
+    {
+        // int mx, my;
+        // Uint32 mouse_buttons = SDL_GetMouseState(&mx, &my);
+
+        SDL_Event e;
+        while (SDL_PollEvent(&e))
+        {
+            switch (e.type)
+            {
+                case SDL_QUIT:
+                    quit = true;
+                    break;
+
+                case SDL_KEYDOWN:
+                    switch (e.key.keysym.sym)
+                    {
+                        case SDLK_ESCAPE:
+                            quit = true;
+                            break;
+
+                        default:
+                            break;
+                    }
+                    break;
+                
+                default:
+                    break;
+            }
+        }
+
+        Uint64 curr_ticks = SDL_GetTicks64();
+        float dt = (curr_ticks - prev_ticks) / 1000.0f;
+        prev_ticks = curr_ticks;
+
+
+
+        SDL_SetRenderDrawColor(renderer, 200, 200, 200, 255);
+        SDL_RenderClear(renderer);
+        SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+
+
+        SDL_RenderPresent(renderer);
+        SDL_Delay(30);
+    }
+
+
     graph_vis_destroy(gv);
-
-
-
-
     graph_destroy(g);
+
+
+    SDL_DestroyRenderer(renderer);
+    SDL_DestroyWindow(window);
+    SDL_Quit();
+
 
     return 0;
 }
