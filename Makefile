@@ -1,27 +1,25 @@
+
+
 CC = gcc
-CFLAGS = -Wall -pedantic -I/opt/homebrew/include
-LIBS = -L/opt/homebrew/lib -lSDL2
+CFLAGS = -Wall -pedantic
 
-SDIR = src
-ODIR = obj
-
-SRCS := $(wildcard $(SDIR)/*.c)
-HDRS := $(wildcard $(SDIR)/*.h)
-OBJS := $(patsubst $(SDIR)/%.c,$(ODIR)/%.o,$(SRCS))
-
-$(ODIR)/%.o: $(SDIR)/%.c $(HDRS)
-	$(CC) -c -o $@ $< $(CFLAGS)
-
-$(ODIR)/main: $(OBJS)
-	$(CC) -o $@ $^ $(CFLAGS) $(LIBS)
-
-run: $(ODIR)/main
-	./$^
-
-memrun: $(ODIR)/main
-	leaks -atExit -- ./$^
-
-clean:
-	rm -f $(ODIR)/*.o $(ODIR)/main
 
 .PHONY: clean run
+
+all: bin/main
+
+bin/main: obj/main.o obj/graph.o obj/list.o
+	$(CC) $^ -o $@
+
+obj/%.o: src/%.c
+	$(CC) -c $(CFLAGS) $< -o $@
+
+clean:
+	rm bin/* obj/*
+
+
+run: bin/main
+	./bin/main
+
+memrun: bin/main
+	valgrind ./bin/main

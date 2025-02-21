@@ -1,4 +1,4 @@
-#include "linked_list.h"
+#include "list.h"
 
 #include <stdlib.h>
 #include <stdbool.h>
@@ -9,11 +9,11 @@
 typedef struct node node_t;
 struct node
 {
-    void *elem;
+    elem_t elem;
     node_t *next;
 };
 
-static node_t *node_create(void *elem, node_t *next)
+static node_t *node_create(elem_t elem, node_t *next)
 {
     node_t *node = calloc(1, sizeof(node_t));
     node->elem = elem;
@@ -59,7 +59,7 @@ size_t list_size(list_t *list)
     return list->size;
 }
 
-void list_append(list_t *list, void *elem)
+void list_append(list_t *list, elem_t elem)
 {
     node_t *node = node_create(elem, NULL);
     if (list->last)
@@ -77,10 +77,29 @@ void list_append(list_t *list, void *elem)
 }
 
 
-void *list_get_first(list_t *list)
+elem_t list_get_first(list_t *list)
 {
     assert(list->first != NULL);
-    return list->first;
+    return list->first->elem;
+}
+
+elem_t list_get_last(list_t *list)
+{
+    assert(list->last != NULL);
+    return list->last->elem;
+}
+
+void list_apply(list_t *list, void (*f)(size_t, elem_t *))
+{
+    node_t *n = list->first;
+    size_t i = 0;
+    while (n != NULL)
+    {
+        f(i, &n->elem);
+        n = n->next;
+        ++i;
+    }
+    assert(i == list->size);
 }
 
 
@@ -107,10 +126,10 @@ bool iter_has_next(iter_t *iter)
     return iter->next != NULL;
 }
 
-void *iter_next(iter_t *iter)
+elem_t iter_next(iter_t *iter)
 {
     assert(iter->next != NULL);
-    void *elem = iter->next->elem;
+    elem_t elem = iter->next->elem;
     iter->next = iter->next->next;
     return elem;
 }

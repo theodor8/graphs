@@ -1,88 +1,106 @@
 #include "graph.h"
 
 #include <stdlib.h>
-#include <string.h>
+#include <assert.h>
 
-#include "linked_list.h"
-
-
+#include "list.h"
 
 
-struct graph_node
+
+
+struct edge
 {
-    char *name;
-    list_t *adj;
+    float w; // weight
+    size_t n; // to node
 };
 
-static graph_node_t *node_create(char *name)
+float edge_weight(edge_t *e)
 {
-    graph_node_t *n = calloc(1, sizeof(graph_node_t));
-    n->name = strdup(name);
-    n->adj = list_create();
-    return n;
+    return e->w;
 }
 
-static void node_destroy(graph_node_t *n)
+size_t edge_node(edge_t *e)
 {
-    free(n->name);
-    list_destroy(n->adj);
-    free(n);
-}
-
-char *node_get_name(graph_node_t *n)
-{
-    return n->name;
-}
-
-list_t *node_get_adj(graph_node_t *n)
-{
-    return n->adj;
+    return e->n;
 }
 
 
+
+
+static edge_t *edge_create(float w, size_t n)
+{
+    edge_t *e = calloc(1, sizeof(edge_t));
+    e->w = w;
+    e->n = n;
+    return e;
+}
+
+static void edge_destroy(edge_t *e)
+{
+    free(e);
+}
 
 
 struct graph
 {
-    list_t *nodes;
+    list_t **adj; // array of pointers to adjacency lists of edge_t * 
+    size_t adj_i, adj_size;
 };
 
 graph_t *graph_create(void)
 {
     graph_t *g = calloc(1, sizeof(graph_t));
-    g->nodes = list_create();
+    g->adj_i = 0;
+    g->adj_size = 10;
+    g->adj = calloc(g->adj_size, sizeof(list_t *));
     return g;
 }
 
 void graph_destroy(graph_t *g)
 {
-    iter_t *node_iter = iter_create(g->nodes);
-    while (iter_has_next(node_iter))
+    for (size_t i = 0; i < g->adj_i; ++i)
     {
-        graph_node_t *node = (graph_node_t *)iter_next(node_iter);
-        node_destroy(node);
+        iter_t *adj_iter = iter_create(g->adj[i]);
+        while (iter_has_next(adj_iter))
+        {
+            edge_destroy(iter_next(adj_iter).p);
+        }
+        iter_destroy(adj_iter);
+        list_destroy(g->adj[i]);
     }
-    iter_destroy(node_iter);
-
-    list_destroy(g->nodes);
+    free(g->adj);
     free(g);
 }
 
-list_t *graph_get_nodes(graph_t *g)
+
+
+size_t graph_add_node(graph_t *g)
 {
-    return g->nodes;
+    if (g->adj_i == g->adj_size)
+    {
+        g->adj_size *= 2;
+        g->adj = realloc(g->adj, g->adj_size * sizeof(list_t *));
+    }
+    g->adj[g->adj_i] = list_create();
+    return g->adj_i++;
 }
 
-graph_node_t *graph_add_node(graph_t *g, char *name)
+void graph_add_edge(graph_t *g, size_t n1, size_t n2, float w)
 {
-    graph_node_t *n = node_create(name);
-    list_append(g->nodes, n);
-    return n;
+    assert(n1 < g->adj_i && n2 < g->adj_i);
+    edge_t *e = edge_create(w, n2);
+    list_append(g->adj[n1], PTR_ELEM(e));
 }
 
-void graph_add_edge(graph_node_t *n1, graph_node_t *n2)
+
+
+list_t *graph_adj(graph_t *g, size_t n)
 {
-    list_append(n1->adj, n2);
-    list_append(n2->adj, n1);
+    assert(n < g->adj_i);
+    return g->adj[n];
 }
 
+size_t graph_nodes(graph_t *g)
+{
+    return g->adj_i;
+}
