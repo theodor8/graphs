@@ -9,7 +9,7 @@ LDFLAGS = -L/opt/homebrew/lib -lraylib
 
 all: bin/main
 
-bin/main: obj/main.o obj/graph.o
+bin/main: obj/main.o obj/graph.o obj/raygui.o
 	$(CC) $(LDFLAGS) $^ -o $@
 
 obj/%.o: src/%.c

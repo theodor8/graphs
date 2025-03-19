@@ -1,33 +1,38 @@
 #pragma once
 
 #include <stdlib.h>
+#include <stdbool.h>
+#
 
 
-typedef struct edge edge_t;
-struct edge
+typedef struct GraphEdge GraphEdge;
+struct GraphEdge
 {
-    size_t node; // to node
-    edge_t *next; // next in adj list
+    int node; // to node
+    GraphEdge *next; // next in adj list
 };
 
 typedef struct
 {
+    bool visited;
     float x, y;
-    edge_t *first, *last;
-} node_t;
+    GraphEdge *first, *last;
+} GraphNode;
 
 typedef struct
 {
-    node_t *nodes;
+    GraphNode *nodes;
     size_t nodes_i, nodes_size;
-} graph_t;
+} Graph;
 
 
-graph_t *graph_create(void);
-void graph_destroy(graph_t *g);
+Graph *GraphCreate(void);
+void GraphDestroy(Graph *g);
 
-size_t graph_add_node(graph_t *g, float x, float y);
-void graph_add_edge(graph_t *g, size_t from, size_t to);
+int GraphAddNode(Graph *g, float x, float y);
+void GraphAddEdge(Graph *g, int from, int to);
+
+bool GraphHasEdge(Graph *g, int from, int to);
 
 
 

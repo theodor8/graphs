@@ -2,29 +2,30 @@
 
 #include <stdlib.h>
 #include <assert.h>
+#include <stdbool.h>
 
 
 
 
 
 
-graph_t *graph_create(void)
+Graph *GraphCreate(void)
 {
-    graph_t *g = calloc(1, sizeof(graph_t));
+    Graph *g = calloc(1, sizeof(Graph));
     g->nodes_i = 0;
     g->nodes_size = 10;
-    g->nodes = calloc(g->nodes_size, sizeof(node_t));
+    g->nodes = calloc(g->nodes_size, sizeof(GraphNode));
     return g;
 }
 
-void graph_destroy(graph_t *g)
+void GraphDestroy(Graph *g)
 {
     for (size_t i = 0; i < g->nodes_i; ++i)
     {
-        edge_t *e = g->nodes[i].first;
+        GraphEdge *e = g->nodes[i].first;
         while (e)
         {
-            edge_t *next = e->next;
+            GraphEdge *next = e->next;
             free(e);
             e = next;
         }
@@ -34,12 +35,12 @@ void graph_destroy(graph_t *g)
 }
 
 
-size_t graph_add_node(graph_t *g, float x, float y)
+int GraphAddNode(Graph *g, float x, float y)
 {
     if (g->nodes_i == g->nodes_size)
     {
         g->nodes_size *= 2;
-        g->nodes = realloc(g->nodes, g->nodes_size * sizeof(node_t));
+        g->nodes = realloc(g->nodes, g->nodes_size * sizeof(GraphNode));
     }
     g->nodes[g->nodes_i].x = x;
     g->nodes[g->nodes_i].y = y;
@@ -48,15 +49,15 @@ size_t graph_add_node(graph_t *g, float x, float y)
     return g->nodes_i++;
 }
 
-void graph_add_edge(graph_t *g, size_t from, size_t to)
+void GraphAddEdge(Graph *g, int from, int to)
 {
     assert(from < g->nodes_i && to < g->nodes_i);
 
-    edge_t *e = calloc(1, sizeof(edge_t));
+    GraphEdge *e = calloc(1, sizeof(GraphEdge));
     e->node = to;
     e->next = NULL;
 
-    node_t *n = &g->nodes[from];
+    GraphNode *n = &g->nodes[from];
     if (n->last)
     {
         assert(n->first);
@@ -68,6 +69,23 @@ void graph_add_edge(graph_t *g, size_t from, size_t to)
         n->first = n->last = e;
     }
 }
+
+bool GraphHasEdge(Graph *g, int from, int to)
+{
+    assert(from < g->nodes_i && to < g->nodes_i);
+
+    GraphEdge *e = g->nodes[from].first;
+    while (e)
+    {
+        if (e->node == to)
+        {
+            return true;
+        }
+        e = e->next;
+    }
+    return false;
+}
+
 
 
 
