@@ -12,6 +12,7 @@
 
 #include "graph.h"
 
+// TODO: shaders
 
 
 static pthread_t threadId = { 0 };
