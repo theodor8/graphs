@@ -1,73 +1,96 @@
+#include <math.h>
 #include <stdio.h>
 
+#include "raylib.h"
 
 #include "graph.h"
-#include "list.h"
+
+#define NODE_SIZE 15.0f
 
 
 
-void print_graph(graph_t *g)
+void DrawArrow(Vector2 start, Vector2 end, Color color)
 {
-    size_t nodes = graph_nodes(g);
-    for (size_t n = 0; n < nodes; ++n)
+    Vector2 dir = {end.x - start.x, end.y - start.y};
+    float len = sqrtf(dir.x * dir.x + dir.y * dir.y);
+    if (len == 0) return;
+    Vector2 norm = {dir.x / len, dir.y / len};
+    Vector2 v1 = {end.x - norm.x * NODE_SIZE, end.y - norm.y * NODE_SIZE};
+    Vector2 perp = {-norm.y, norm.x};
+    Vector2 offset = {perp.x * NODE_SIZE / 2.0f, perp.y * NODE_SIZE / 2.0f};
+    Vector2 v2 = {v1.x + offset.x, v1.y + offset.y};
+    Vector2 v3 = {v1.x - offset.x, v1.y - offset.y};
+    DrawLineEx(start, end, 2, color);
+    DrawTriangle(end, v3, v2, color);
+}
+
+void draw_graph(graph_t *g)
+{
+    for (size_t i = 0; i < g->nodes_i; ++i)
     {
-        printf("%zu -> ", n);
-        list_t *adj_list = graph_adj(g, n);
-        iter_t *adj_list_iter = iter_create(adj_list);
-        while (iter_has_next(adj_list_iter))
+        node_t *n = &g->nodes[i];
+        Vector2 from = {n->x, n->y};
+        DrawCircleV(from, NODE_SIZE, RED);
+        edge_t *e = n->first;
+        while (e)
         {
-            edge_t *edge = iter_next(adj_list_iter).p;
-            printf("%zu(w=%f), ", edge_node(edge), edge_weight(edge));
+            n = &g->nodes[e->node];
+            Vector2 to = {n->x, n->y};
+            Vector2 dir = {to.x - from.x, to.y - from.y};
+            float len = sqrtf(dir.x * dir.x + dir.y * dir.y);
+            Vector2 norm = {dir.x / len, dir.y / len};
+            Vector2 offset = {norm.x * NODE_SIZE, norm.y * NODE_SIZE};
+            DrawArrow((Vector2){from.x + offset.x, from.y + offset.y}, (Vector2){to.x - offset.x, to.y - offset.y}, BLACK);
+
+            e = e->next;
         }
-        iter_destroy(adj_list_iter);
-        printf("\n");
     }
 }
 
-void print_list_elem(size_t i, elem_t *e)
-{
-    printf("%d, ", e->i);
-}
 
-void print_list(list_t *l)
-{
-    printf("[");
-    list_apply(l, print_list_elem);
-    printf("]\n");
-}
-
-
-void list_apply_fn(size_t i, elem_t *e)
-{
-    e->i = i * 2;
-}
 
 int main(void)
 {
-    // graph_t *g = graph_create();
-    // for (int i = 0; i < 20; ++i)
-    // {
-    //     graph_add_node(g);
-    // }
-    // for (int i = 0; i < 20; ++i)
-    // {
-    //     graph_add_edge(g, i, (i + 1) % 20, i * 2);
-    // }
-    // print_graph(g);
-    // graph_destroy(g);
+    InitWindow(600, 600, "graphs");
+    SetTargetFPS(60);
+    Camera2D camera = { 0 };
+    camera.zoom = 1.0f;
 
-    list_t *l = list_create();
-    for (int i = 0; i < 10; ++i)
+    graph_t *g = graph_create();
+
+    size_t last_node = -1;
+    while (!WindowShouldClose())
     {
-        list_append(l, INT_ELEM(0));
+        Vector2 mouse = GetScreenToWorld2D(GetMousePosition(), camera);
+
+        if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON))
+        {
+            size_t node = graph_add_node(g, mouse.x, mouse.y);
+            if (last_node != -1)
+            {
+                graph_add_edge(g, last_node, node);
+            }
+            last_node = node;
+        }
+
+        BeginDrawing();
+
+            ClearBackground(RAYWHITE);
+
+            BeginMode2D(camera);
+                draw_graph(g);
+            EndMode2D();
+
+            DrawFPS(0, 0);
+
+        EndDrawing();
     }
 
-    print_list(l);
-    list_apply(l, list_apply_fn);
-    print_list(l);
 
-    list_destroy(l);
 
+    graph_destroy(g);
+
+    CloseWindow();
 
     return 0;
 }

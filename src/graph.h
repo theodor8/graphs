@@ -1,25 +1,34 @@
 #pragma once
 
-#include "list.h"
+#include <stdlib.h>
+
 
 typedef struct edge edge_t;
+struct edge
+{
+    size_t node; // to node
+    edge_t *next; // next in adj list
+};
 
-float edge_weight(edge_t *e);
-size_t edge_node(edge_t *e);
+typedef struct
+{
+    float x, y;
+    edge_t *first, *last;
+} node_t;
 
+typedef struct
+{
+    node_t *nodes;
+    size_t nodes_i, nodes_size;
+} graph_t;
 
-
-
-typedef struct graph graph_t;
 
 graph_t *graph_create(void);
 void graph_destroy(graph_t *g);
 
-size_t graph_add_node(graph_t *g);
-void graph_add_edge(graph_t *g, size_t n1, size_t n2, float w);
+size_t graph_add_node(graph_t *g, float x, float y);
+void graph_add_edge(graph_t *g, size_t from, size_t to);
 
-list_t *graph_adj(graph_t *g, size_t n);
-size_t graph_nodes(graph_t *g);
 
 
 

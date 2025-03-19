@@ -1,15 +1,16 @@
 
 
 CC = gcc
-CFLAGS = -Wall -pedantic
+CFLAGS = -Wall -pedantic -I/opt/homebrew/include 
+LDFLAGS = -L/opt/homebrew/lib -lraylib
 
 
 .PHONY: clean run
 
 all: bin/main
 
-bin/main: obj/main.o obj/graph.o obj/list.o
-	$(CC) $^ -o $@
+bin/main: obj/main.o obj/graph.o
+	$(CC) $(LDFLAGS) $^ -o $@
 
 obj/%.o: src/%.c
 	$(CC) -c $(CFLAGS) $< -o $@
@@ -22,4 +23,4 @@ run: bin/main
 	./bin/main
 
 memrun: bin/main
-	valgrind ./bin/main
+	leaks -atExit -- ./bin/main
