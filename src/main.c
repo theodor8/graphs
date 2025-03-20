@@ -2,18 +2,20 @@
 #include <pthread.h>
 #include <unistd.h>
 
-#include "raylib.h"
-#include "raymath.h"
 
 #define RAYGUI_IMPLEMENTATION
 #include "raygui.h"
 
+#include "raylib.h"
+#include "raymath.h"
+
 #include "style_cyber.h"
 
 #include "graph.h"
+#include "list.h"
 
 // TODO: shaders
-
+// TODO: force-directed
 
 static pthread_t threadId = { 0 };
 
@@ -35,17 +37,21 @@ static int selectedNode = -1;
 
 static int dropDownActive = 0;
 static bool dropDownEditMode = false;
+static bool threadActive = false;
+static bool autoStep = false;
+static pthread_mutex_t stepMutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_cond_t stepCond = PTHREAD_COND_INITIALIZER;
 
-static Graph *g = NULL;
+static Graph *graph = NULL;
 
 
 
 
 static int NearestNode(Vector2 pos)
 {
-    for (int i = 0; i < g->nodes_i; ++i)
+    for (int i = 0; i < graph->nodes_i; ++i)
     {
-        GraphNode *n = &g->nodes[i];
+        GraphNode *n = &graph->nodes[i];
         Vector2 center = {n->x, n->y};
         if (CheckCollisionPointCircle(mouseWorldPos, center, nodeSize * 2))
         {
@@ -85,12 +91,12 @@ void HandleModeAdd(void)
         int nearest = NearestNode(mouseWorldPos);
         if (nearest == -1)
         {
-            int added = GraphAddNode(g, mouseWorldPos.x, mouseWorldPos.y);
+            int added = GraphAddNode(graph, mouseWorldPos.x, mouseWorldPos.y);
             TraceLog(LOG_INFO, "Added node %d at %f %f", added, mouseWorldPos.x, mouseWorldPos.y);
             if (selectedNode != -1)
             {
                 TraceLog(LOG_INFO, "Added edge %d -> %d", selectedNode, added);
-                GraphAddEdge(g, selectedNode, added);
+                GraphAddEdge(graph, selectedNode, added);
                 selectedNode = -1;
             }
             return;
@@ -105,10 +111,10 @@ void HandleModeAdd(void)
             selectedNode = -1;
             return;
         }
-        if (!GraphHasEdge(g, selectedNode, nearest))
+        if (!GraphHasEdge(graph, selectedNode, nearest))
         {
             TraceLog(LOG_INFO, "Added edge %d -> %d", selectedNode, nearest);
-            GraphAddEdge(g, selectedNode, nearest);
+            GraphAddEdge(graph, selectedNode, nearest);
             selectedNode = -1;
             return;
         }
@@ -128,7 +134,7 @@ void HandleModeMove(void)
         }
         if (selectedMoveNode != -1)
         {
-            GraphNode *n = &g->nodes[selectedMoveNode];
+            GraphNode *n = &graph->nodes[selectedMoveNode];
             n->x = mouseWorldPos.x;
             n->y = mouseWorldPos.y;
         }
@@ -164,55 +170,111 @@ void DrawGraph(Graph *g)
     {
         GraphNode *node = &g->nodes[i];
         Vector2 from = {node->x, node->y};
-        DrawCircleV(from, nodeSize, GetColor(GuiGetStyle(DEFAULT, selectedNode == i ? BASE_COLOR_PRESSED : BASE_COLOR_FOCUSED)));
+        DrawCircleV(from, nodeSize, GetColor(GuiGetStyle(DEFAULT, selectedNode == i ? BASE_COLOR_PRESSED
+                                                                  : node->visited ? BASE_COLOR_FOCUSED
+                                                                  : BASE_COLOR_NORMAL)));
         GraphEdge *edge = node->first;
         while (edge)
         {
-            node = &g->nodes[edge->node];
-            Vector2 to = {node->x, node->y};
-            DrawArrow(from, to, GetColor(GuiGetStyle(DEFAULT, BASE_COLOR_FOCUSED)));
+            GraphNode *adjNode = &g->nodes[edge->node];
+            Vector2 to = {adjNode->x, adjNode->y};
+            DrawArrow(from, to, GetColor(GuiGetStyle(DEFAULT, edge->visited ? BASE_COLOR_FOCUSED : BASE_COLOR_NORMAL)));
             edge = edge->next;
         }
-        DrawText(TextFormat("%d", i), from.x - nodeSize/4, from.y - nodeSize/2, nodeSize, GetColor(GuiGetStyle(DEFAULT, TEXT_COLOR_FOCUSED)));
+        DrawText(TextFormat("%d", i), from.x - nodeSize/4, from.y - nodeSize/2, nodeSize,
+                 GetColor(GuiGetStyle(DEFAULT, selectedNode == i ? TEXT_COLOR_PRESSED
+                                               : node->visited ? TEXT_COLOR_FOCUSED
+                                               : TEXT_COLOR_NORMAL)));
     }
 }
 
 
-static void *GraphBFS(void *arg)
+static void ThreadStep(void)
 {
-    // TODO: BFS
+    if (autoStep)
+    {
+        // TODO: make this configurable (slider)
+        usleep(500000);
+        return;
+    }
+    pthread_mutex_lock(&stepMutex);
+    pthread_cond_wait(&stepCond, &stepMutex);
+    pthread_mutex_unlock(&stepMutex);
+}
+
+static void *GraphBFSThread(void *arg)
+{
+    GraphClearVisited(graph);
     TraceLog(LOG_INFO, "BFS started");
-    sleep(1);
+    int root = selectedNode;
+    selectedNode = -1;
+    List *queue = ListCreate();
+    graph->nodes[root].visited = true;
+    TraceLog(LOG_INFO, "BFS visited %d (root)", root);
+    ThreadStep();
+    ListAppend(queue, INT_ELEM(root));
+    while (ListSize(queue) > 0)
+    {
+        int adj = ListRemoveFirst(queue).i;
+        GraphEdge *edge = graph->nodes[adj].first;
+        while (edge)
+        {
+            GraphNode *node = &graph->nodes[edge->node];
+            if (!node->visited)
+            {
+                node->visited = true;
+                edge->visited = true;
+                TraceLog(LOG_INFO, "BFS visited %d", edge->node);
+                ListAppend(queue, INT_ELEM(edge->node));
+                ThreadStep();
+            }
+            edge = edge->next;
+        }
+    }
+    ListDestroy(queue);
     TraceLog(LOG_INFO, "BFS finished");
+    threadActive = false;
     return NULL;
 }
 
-static void *GraphDFS(void *arg)
+static void *GraphDFSThread(void *arg)
 {
     // TODO: DFS
     TraceLog(LOG_INFO, "DFS started");
     sleep(1);
     TraceLog(LOG_INFO, "DFS finished");
+    threadActive = false;
     return NULL;
 }
 
 static void DispatchThread(void)
 {
+    if (threadActive)
+    {
+        TraceLog(LOG_WARNING, "Thread already active");
+        return;
+    }
     void *(*threadFunction)(void *) = NULL;
     switch (dropDownActive)
     {
         case 0:
-            threadFunction = GraphBFS;
+            threadFunction = GraphBFSThread;
             break;
         case 1:
-            threadFunction = GraphDFS;
+            threadFunction = GraphDFSThread;
             break;
         default:
             break;
     }
     if (pthread_create(&threadId, NULL, threadFunction, NULL) != 0)
-        TraceLog(LOG_ERROR, "Error creating loading thread");
-    else TraceLog(LOG_INFO, "Loading thread initialized successfully");
+    {
+        TraceLog(LOG_ERROR, "Error creating thread");
+    }
+    else
+    {
+        TraceLog(LOG_INFO, "Thread created successfully");
+        threadActive = true;
+    }
 }
 
 
@@ -229,7 +291,7 @@ int main(void)
     camera.zoom = 1.0f;
 
 
-    g = GraphCreate();
+    graph = GraphCreate();
 
     while (!WindowShouldClose())
     {
@@ -278,8 +340,9 @@ int main(void)
 
             ClearBackground(GetColor(GuiGetStyle(DEFAULT, BACKGROUND_COLOR)));
 
+
             BeginMode2D(camera);
-                DrawGraph(g);
+                DrawGraph(graph);
             EndMode2D();
 
 
@@ -311,6 +374,25 @@ int main(void)
             ++gui_i;
 
 
+            ++gui_i;
+            if (GuiButton((Rectangle){ 2*padding, 2*padding + gui_i*(controlHeight+padding), controlWidth/2.f-padding/2., controlHeight}, "STEP"))
+            {
+                pthread_mutex_lock(&stepMutex);
+                pthread_cond_signal(&stepCond);
+                pthread_mutex_unlock(&stepMutex);
+            }
+            bool autoStepPrev = autoStep;
+            GuiToggle((Rectangle){ 2.5*padding + controlWidth/2., 2*padding + gui_i*(controlHeight+padding), controlWidth/2.-padding/2., controlHeight}, "AUTO", &autoStep);
+            if (autoStep != autoStepPrev)
+            {
+                pthread_mutex_lock(&stepMutex);
+                pthread_cond_signal(&stepCond);
+                pthread_mutex_unlock(&stepMutex);
+
+            }
+            --gui_i;
+
+
             if (GuiDropdownBox((Rectangle){ 2*padding, 2*padding + gui_i*(controlHeight+padding), controlWidth/2.-padding/2., controlHeight}, 
                                "BFS;DFS", &dropDownActive, dropDownEditMode)) dropDownEditMode = !dropDownEditMode;
             if (GuiButton((Rectangle){ 2.5*padding + controlWidth/2., 2.*padding + gui_i*(controlHeight+padding), controlWidth/2.-padding/2., controlHeight}, "START"))
@@ -318,6 +400,7 @@ int main(void)
                 if (selectedNode != -1) DispatchThread();
                 else TraceLog(LOG_WARNING, "No node selected");
             }
+            ++gui_i;
             ++gui_i;
 
 
@@ -332,7 +415,7 @@ int main(void)
 
 
 
-    GraphDestroy(g);
+    GraphDestroy(graph);
 
     CloseWindow();
 

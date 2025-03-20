@@ -86,6 +86,20 @@ bool GraphHasEdge(Graph *g, int from, int to)
     return false;
 }
 
+void GraphClearVisited(Graph *g)
+{
+    for (size_t i = 0; i < g->nodes_i; ++i)
+    {
+        g->nodes[i].visited = false;
+        GraphEdge *e = g->nodes[i].first;
+        while (e)
+        {
+            e->visited = false;
+            e = e->next;
+        }
+    }
+}
+
 
 
 

@@ -8,6 +8,7 @@
 typedef struct GraphEdge GraphEdge;
 struct GraphEdge
 {
+    bool visited;
     int node; // to node
     GraphEdge *next; // next in adj list
 };
@@ -33,6 +34,8 @@ int GraphAddNode(Graph *g, float x, float y);
 void GraphAddEdge(Graph *g, int from, int to);
 
 bool GraphHasEdge(Graph *g, int from, int to);
+
+void GraphClearVisited(Graph *g);
 
 
 

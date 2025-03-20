@@ -4,64 +4,74 @@
 #include <stdbool.h>
 #include <assert.h>
 
-
-
-typedef struct node node_t;
-struct node
+typedef struct Node Node;
+struct Node
 {
-    elem_t elem;
-    node_t *next;
+    ListElem elem;
+    Node *next;
 };
 
-static node_t *node_create(elem_t elem, node_t *next)
+static Node *NodeCreate(ListElem elem, Node *next)
 {
-    node_t *node = calloc(1, sizeof(node_t));
+    Node *node = calloc(1, sizeof(Node));
     node->elem = elem;
     node->next = next;
     return node;
 }
 
-static void node_destroy(node_t *node)
+static void NodeDestroy(Node *node)
 {
     free(node);
 }
 
-
-
-
-struct list
+struct List
 {
-    node_t *first;
-    node_t *last;
+    Node *first;
+    Node *last;
     size_t size;
 };
 
-list_t *list_create(void)
+List *ListCreate(void)
 {
-    list_t *list = calloc(1, sizeof(list_t));
+    List *list = calloc(1, sizeof(List));
     return list;
 }
 
-void list_destroy(list_t *list)
+void ListDestroy(List *list)
 {
-    node_t *node = list->first;
+    Node *node = list->first;
     while (node)
     {
-        node_t *next = node->next;
-        node_destroy(node);
+        Node *next = node->next;
+        NodeDestroy(node);
         node = next; 
     }
     free(list);
 }
 
-size_t list_size(list_t *list)
+size_t ListSize(List *list)
 {
     return list->size;
 }
 
-void list_append(list_t *list, elem_t elem)
+void ListPrepend(List *list, ListElem elem)
 {
-    node_t *node = node_create(elem, NULL);
+    Node *node = NodeCreate(elem, list->first);
+    if (list->first)
+    {
+        list->first = node;
+    }
+    else
+    {
+        assert(list->last == NULL);
+        assert(list->size == 0);
+        list->first = list->last = node;
+    }
+    list->size++;
+}
+void ListAppend(List *list, ListElem elem)
+{
+    Node *node = NodeCreate(elem, NULL);
     if (list->last)
     {
         list->last->next = node;
@@ -77,61 +87,75 @@ void list_append(list_t *list, elem_t elem)
 }
 
 
-elem_t list_get_first(list_t *list)
+
+ListElem ListRemoveFirst(List *list)
+{
+    assert(list->first != NULL);
+    Node *node = list->first;
+    list->first = node->next;
+    if (list->last == node)
+    {
+        assert(list->size == 1 && list->first == NULL);
+        list->last = NULL;
+    }
+    ListElem elem = node->elem;
+    NodeDestroy(node);
+    list->size--;
+    return elem;
+}
+
+
+ListElem ListGetFirst(List *list)
 {
     assert(list->first != NULL);
     return list->first->elem;
 }
 
-elem_t list_get_last(list_t *list)
+ListElem ListGetLast(List *list)
 {
     assert(list->last != NULL);
     return list->last->elem;
 }
 
-void list_apply(list_t *list, void (*f)(size_t, elem_t *))
+void ListApply(List *list, void (*f)(size_t, ListElem *))
 {
-    node_t *n = list->first;
+    Node *node = list->first;
     size_t i = 0;
-    while (n != NULL)
+    while (node != NULL)
     {
-        f(i, &n->elem);
-        n = n->next;
+        f(i, &node->elem);
+        node = node->next;
         ++i;
     }
     assert(i == list->size);
 }
 
-
-
-struct iter
+struct Iter
 {
-    node_t *next;
+    Node *next;
 };
 
-iter_t *iter_create(list_t *list)
+Iter *IterCreate(List *list)
 {
-    iter_t *iter = calloc(1, sizeof(iter_t));
+    Iter *iter = calloc(1, sizeof(Iter));
     iter->next = list->first;
     return iter;
 }
 
-void iter_destroy(iter_t *iter)
+void IterDestroy(Iter *iter)
 {
     free(iter);
 }
 
-bool iter_has_next(iter_t *iter)
+bool IterHasNext(Iter *iter)
 {
     return iter->next != NULL;
 }
 
-elem_t iter_next(iter_t *iter)
+ListElem IterNext(Iter *iter)
 {
     assert(iter->next != NULL);
-    elem_t elem = iter->next->elem;
+    ListElem elem = iter->next->elem;
     iter->next = iter->next->next;
     return elem;
 }
-
-
