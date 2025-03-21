@@ -1,0 +1,19 @@
+#
+# rgl layout text file (v4.0) - raygui layout file generated using rGuiLayout
+#
+# Number of controls:     8
+#
+# Ref. window:    r <x> <y> <width> <height>
+# Anchor info:    a <id> <name> <posx> <posy> <enabled>
+# Control info:   c <id> <type> <name> <rectangle> <anchor_id> <text>
+#
+r 0 40 -1 -1
+a 001 anchor01 24 24 1
+c 000 1 controlPanel 0 0 247 496 1 CONTROL PANEL
+c 001 9 mode 12 12 70 30 1 [F]REE;[A]DD;[M]OVE
+c 002 5 resetCamera 10 51 214 29 1 [R]ESET CAMERA
+c 003 2 Line003 10 94 214 17 1 
+c 004 11 algo 16 128 111 28 1 BFS;DFS
+c 005 5 start 136 129 92 29 1 START
+c 006 5 auto 144 167 79 27 1 AUTO
+c 007 5 step 23 171 100 23 1 STEP

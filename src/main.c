@@ -6,6 +6,9 @@
 #define RAYGUI_IMPLEMENTATION
 #include "raygui.h"
 
+#define GUI_LAYOUT_IMPLEMENTATION
+#include "gui_layout.h"
+
 #include "raylib.h"
 #include "raymath.h"
 
@@ -17,30 +20,21 @@
 // TODO: shaders
 // TODO: force-directed
 
-static pthread_t threadId = { 0 };
 
-static const int screenWidth = 1000;
-static const int screenHeight = 600;
-static Camera2D camera = { 0 };
 
 static Vector2 mouseScreenPos = {0.0f, 0.0f};
 static Vector2 mouseWorldPos = {0.0f, 0.0f};
+static Camera2D camera = { 0 };
+static GuiLayoutState state;
+static Rectangle controlPanelRec;
 
-static const int padding = 20;
-static const int panelWidth = 240;
-static const int controlWidth = panelWidth - 2 * padding;
-static const int controlHeight = 33;
-
-static const float nodeSize = 20.0f;
-static int mode = 1;
-static int selectedNode = -1;
-
-static int dropDownActive = 0;
-static bool dropDownEditMode = false;
+static pthread_t threadId = { 0 };
 static bool threadActive = false;
-static bool autoStep = false;
 static pthread_mutex_t stepMutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t stepCond = PTHREAD_COND_INITIALIZER;
+
+static const float nodeSize = 20.0f;
+static int selectedNode = -1;
 
 static Graph *graph = NULL;
 
@@ -66,7 +60,7 @@ static int NearestNode(Vector2 pos)
 
 void HandleModeFree(void)
 {
-    if (IsMouseButtonDown(MOUSE_BUTTON_LEFT) && mouseScreenPos.x > panelWidth + 2*padding)
+    if (IsMouseButtonDown(MOUSE_BUTTON_LEFT) && !CheckCollisionPointRec(mouseScreenPos, controlPanelRec))
     {
         Vector2 delta = GetMouseDelta();
         delta = Vector2Scale(delta, -1.0f/camera.zoom);
@@ -86,7 +80,7 @@ void HandleModeFree(void)
 
 void HandleModeAdd(void)
 {
-    if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON) && mouseScreenPos.x > panelWidth + 2*padding)
+    if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON) && !CheckCollisionPointRec(mouseScreenPos, controlPanelRec))
     {
         int nearest = NearestNode(mouseWorldPos);
         if (nearest == -1)
@@ -191,7 +185,7 @@ void DrawGraph(Graph *g)
 
 static void ThreadStep(void)
 {
-    if (autoStep)
+    if (state.autoPressed)
     {
         // TODO: make this configurable (slider)
         usleep(500000);
@@ -255,7 +249,7 @@ static void DispatchThread(void)
         return;
     }
     void *(*threadFunction)(void *) = NULL;
-    switch (dropDownActive)
+    switch (state.algoActive)
     {
         case 0:
             threadFunction = GraphBFSThread;
@@ -283,12 +277,16 @@ static void DispatchThread(void)
 
 int main(void)
 {
-
+    const int screenWidth = 1000;
+    const int screenHeight = 600;
     SetTraceLogLevel(LOG_DEBUG);
     InitWindow(screenWidth, screenHeight, "Graphs");
     GuiLoadStyleCyber();
     SetTargetFPS(60);
     camera.zoom = 1.0f;
+
+    state = InitGuiLayout();
+    controlPanelRec = state.layoutRecs[0];
 
 
     graph = GraphCreate();
@@ -301,13 +299,13 @@ int main(void)
         switch (GetKeyPressed())
         {
             case KEY_F:
-                mode = 0;
+                state.modeActive = 0;
                 break;
             case KEY_A:
-                mode = 1;
+                state.modeActive = 1;
                 break;
             case KEY_M:
-                mode = 2;
+                state.modeActive = 2;
                 break;
             case KEY_R:
                 camera.zoom = 1.0f;
@@ -319,7 +317,7 @@ int main(void)
         }
 
 
-        switch (mode)
+        switch (state.modeActive)
         {
             case 0:
                 HandleModeFree();
@@ -346,66 +344,52 @@ int main(void)
             EndMode2D();
 
 
+            DrawRectangleRec(controlPanelRec, GetColor(GuiGetStyle(DEFAULT, BASE_COLOR_DISABLED)));
+            GuiLayout(&state);
 
-
-
-            // raygui ------------------------------------------------------
-            if (dropDownEditMode) GuiLock();
-            Rectangle panelRect = { padding, padding, panelWidth, screenHeight - 2 * padding};
-            DrawRectangleRec(panelRect, GetColor(GuiGetStyle(DEFAULT, BASE_COLOR_DISABLED)));
-            GuiGroupBox(panelRect, "Control Panel");
-            int gui_i = 0;
-
-
-            GuiToggleGroup((Rectangle){ 2*padding, 2*padding + gui_i*(controlHeight+padding), 
-                            controlWidth/3.0f, controlHeight}, "[F]REE;[A]DD;[M]OVE", &mode);
-            ++gui_i;
-
-
-            if (GuiButton((Rectangle){ 2*padding, 2*padding + gui_i*(controlHeight+padding), controlWidth, controlHeight}, "[R]ESET CAMERA"))
+            if (state.resetCameraPressed)
             {
                 camera.zoom = 1.0f;
                 camera.offset = camera.target = (Vector2){0.0f, 0.0f};
             }
-            ++gui_i;
 
-
-            GuiLine((Rectangle){ 2*padding, 2*padding + gui_i*(controlHeight+padding), controlWidth, controlHeight}, NULL);
-            ++gui_i;
-
-
-            ++gui_i;
-            if (GuiButton((Rectangle){ 2*padding, 2*padding + gui_i*(controlHeight+padding), controlWidth/2.f-padding/2., controlHeight}, "STEP"))
+            if (state.stepPressed)
             {
                 pthread_mutex_lock(&stepMutex);
                 pthread_cond_signal(&stepCond);
                 pthread_mutex_unlock(&stepMutex);
             }
-            bool autoStepPrev = autoStep;
-            GuiToggle((Rectangle){ 2.5*padding + controlWidth/2., 2*padding + gui_i*(controlHeight+padding), controlWidth/2.-padding/2., controlHeight}, "AUTO", &autoStep);
-            if (autoStep != autoStepPrev)
-            {
-                pthread_mutex_lock(&stepMutex);
-                pthread_cond_signal(&stepCond);
-                pthread_mutex_unlock(&stepMutex);
-
-            }
-            --gui_i;
 
 
-            if (GuiDropdownBox((Rectangle){ 2*padding, 2*padding + gui_i*(controlHeight+padding), controlWidth/2.-padding/2., controlHeight}, 
-                               "BFS;DFS", &dropDownActive, dropDownEditMode)) dropDownEditMode = !dropDownEditMode;
-            if (GuiButton((Rectangle){ 2.5*padding + controlWidth/2., 2.*padding + gui_i*(controlHeight+padding), controlWidth/2.-padding/2., controlHeight}, "START"))
-            {
-                if (selectedNode != -1) DispatchThread();
-                else TraceLog(LOG_WARNING, "No node selected");
-            }
-            ++gui_i;
-            ++gui_i;
 
 
-            GuiUnlock();
+
             // raygui ------------------------------------------------------
+            /*bool autoStepPrev = autoStep;*/
+            /*GuiToggle((Rectangle){ 2.5*padding + controlWidth/2., 2*padding + gui_i*(controlHeight+padding), controlWidth/2.-padding/2., controlHeight}, "AUTO", &autoStep);*/
+            /*if (autoStep != autoStepPrev)*/
+            /*{*/
+            /*    pthread_mutex_lock(&stepMutex);*/
+            /*    pthread_cond_signal(&stepCond);*/
+            /*    pthread_mutex_unlock(&stepMutex);*/
+            /**/
+            /*}*/
+            /*--gui_i;*/
+            /**/
+            /**/
+            /*if (GuiDropdownBox((Rectangle){ 2*padding, 2*padding + gui_i*(controlHeight+padding), controlWidth/2.-padding/2., controlHeight}, */
+            /*                   "BFS;DFS", &dropDownActive, dropDownEditMode)) dropDownEditMode = !dropDownEditMode;*/
+            /*if (GuiButton((Rectangle){ 2.5*padding + controlWidth/2., 2.*padding + gui_i*(controlHeight+padding), controlWidth/2.-padding/2., controlHeight}, "START"))*/
+            /*{*/
+            /*    if (selectedNode != -1) DispatchThread();*/
+            /*    else TraceLog(LOG_WARNING, "No node selected");*/
+            /*}*/
+            /*++gui_i;*/
+            /*++gui_i;*/
+            /**/
+            /**/
+            /*GuiUnlock();*/
+            /*// raygui ------------------------------------------------------*/
 
 
             DrawFPS(screenWidth - 80, 0);
