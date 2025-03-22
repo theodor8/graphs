@@ -185,7 +185,7 @@ void DrawGraph(Graph *g)
 
 static void ThreadStep(void)
 {
-    if (state.autoPressed)
+    if (state.autoActive)
     {
         // TODO: make this configurable (slider)
         usleep(500000);
@@ -233,9 +233,31 @@ static void *GraphBFSThread(void *arg)
 
 static void *GraphDFSThread(void *arg)
 {
-    // TODO: DFS
+    GraphClearVisited(graph);
     TraceLog(LOG_INFO, "DFS started");
-    sleep(1);
+    int root = selectedNode;
+    selectedNode = -1;
+    List *stack = ListCreate();
+    ListPrepend(stack, INT_ELEM(root));
+    while (ListSize(stack) > 0)
+    {
+        int adj = ListRemoveFirst(stack).i;
+        GraphNode *node = &graph->nodes[adj];
+        if (node->visited) continue;
+        node->visited = true;
+        TraceLog(LOG_INFO, "DFS visited %d", adj);
+        ThreadStep();
+        GraphEdge *edge = node->first;
+        while (edge)
+        {
+            if (!graph->nodes[edge->node].visited)
+            {
+                ListPrepend(stack, INT_ELEM(edge->node));
+            }
+            edge = edge->next;
+        }
+    }
+    ListDestroy(stack);
     TraceLog(LOG_INFO, "DFS finished");
     threadActive = false;
     return NULL;
@@ -345,6 +367,8 @@ int main(void)
 
 
             DrawRectangleRec(controlPanelRec, GetColor(GuiGetStyle(DEFAULT, BASE_COLOR_DISABLED)));
+            
+            bool autoActivePrev = state.autoActive;
             GuiLayout(&state);
 
             if (state.resetCameraPressed)
@@ -360,37 +384,19 @@ int main(void)
                 pthread_mutex_unlock(&stepMutex);
             }
 
+            if (state.startPressed)
+            {
+                if (selectedNode != -1) DispatchThread();
+                else TraceLog(LOG_WARNING, "No node selected");
+            }
 
-
-
-
-            // raygui ------------------------------------------------------
-            /*bool autoStepPrev = autoStep;*/
-            /*GuiToggle((Rectangle){ 2.5*padding + controlWidth/2., 2*padding + gui_i*(controlHeight+padding), controlWidth/2.-padding/2., controlHeight}, "AUTO", &autoStep);*/
-            /*if (autoStep != autoStepPrev)*/
-            /*{*/
-            /*    pthread_mutex_lock(&stepMutex);*/
-            /*    pthread_cond_signal(&stepCond);*/
-            /*    pthread_mutex_unlock(&stepMutex);*/
-            /**/
-            /*}*/
-            /*--gui_i;*/
-            /**/
-            /**/
-            /*if (GuiDropdownBox((Rectangle){ 2*padding, 2*padding + gui_i*(controlHeight+padding), controlWidth/2.-padding/2., controlHeight}, */
-            /*                   "BFS;DFS", &dropDownActive, dropDownEditMode)) dropDownEditMode = !dropDownEditMode;*/
-            /*if (GuiButton((Rectangle){ 2.5*padding + controlWidth/2., 2.*padding + gui_i*(controlHeight+padding), controlWidth/2.-padding/2., controlHeight}, "START"))*/
-            /*{*/
-            /*    if (selectedNode != -1) DispatchThread();*/
-            /*    else TraceLog(LOG_WARNING, "No node selected");*/
-            /*}*/
-            /*++gui_i;*/
-            /*++gui_i;*/
-            /**/
-            /**/
-            /*GuiUnlock();*/
-            /*// raygui ------------------------------------------------------*/
-
+            if (state.autoActive && !autoActivePrev)
+            {
+                pthread_mutex_lock(&stepMutex);
+                pthread_cond_signal(&stepCond);
+                pthread_mutex_unlock(&stepMutex);
+            }
+            
 
             DrawFPS(screenWidth - 80, 0);
 

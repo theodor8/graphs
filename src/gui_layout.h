@@ -36,8 +36,8 @@ typedef struct {
     bool algoEditMode;
     int algoActive;
     bool startPressed;
-    bool autoPressed;
     bool stepPressed;
+    bool autoActive;
 
     Rectangle layoutRecs[8];
 
@@ -103,17 +103,17 @@ GuiLayoutState InitGuiLayout(void)
     state.algoEditMode = false;
     state.algoActive = 0;
     state.startPressed = false;
-    state.autoPressed = false;
     state.stepPressed = false;
+    state.autoActive = true;
 
-    state.layoutRecs[0] = (Rectangle){ 24, 24, 247, 496 };
-    state.layoutRecs[1] = (Rectangle){ 36, 36, 70, 30 };
-    state.layoutRecs[2] = (Rectangle){ 34, 75, 214, 29 };
-    state.layoutRecs[3] = (Rectangle){ 34, 118, 214, 17 };
-    state.layoutRecs[4] = (Rectangle){ 40, 152, 111, 28 };
-    state.layoutRecs[5] = (Rectangle){ 160, 153, 92, 29 };
-    state.layoutRecs[6] = (Rectangle){ 168, 191, 79, 27 };
-    state.layoutRecs[7] = (Rectangle){ 47, 195, 100, 23 };
+    state.layoutRecs[0] = (Rectangle){ 32, 32, 240, 344 };
+    state.layoutRecs[1] = (Rectangle){ 40, 40, 72, 32 };
+    state.layoutRecs[2] = (Rectangle){ 40, 88, 104, 32 };
+    state.layoutRecs[3] = (Rectangle){ 40, 128, 214, 17 };
+    state.layoutRecs[4] = (Rectangle){ 40, 152, 104, 32 };
+    state.layoutRecs[5] = (Rectangle){ 160, 152, 104, 32 };
+    state.layoutRecs[6] = (Rectangle){ 40, 200, 104, 32 };
+    state.layoutRecs[7] = (Rectangle){ 160, 200, 104, 32 };
 
     // Custom variables initialization
 
@@ -129,8 +129,8 @@ void GuiLayout(GuiLayoutState *state)
     state->resetCameraPressed = GuiButton(state->layoutRecs[2], "[R]ESET CAMERA"); 
     GuiLine(state->layoutRecs[3], NULL);
     state->startPressed = GuiButton(state->layoutRecs[5], "START"); 
-    state->autoPressed = GuiButton(state->layoutRecs[6], "AUTO"); 
-    state->stepPressed = GuiButton(state->layoutRecs[7], "STEP"); 
+    state->stepPressed = GuiButton(state->layoutRecs[6], "STEP"); 
+    GuiToggle(state->layoutRecs[7], "AUTO", &state->autoActive);
     if (GuiDropdownBox(state->layoutRecs[4], "BFS;DFS", &state->algoActive, state->algoEditMode)) state->algoEditMode = !state->algoEditMode;
     
     GuiUnlock();
