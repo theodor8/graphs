@@ -112,6 +112,8 @@ void HandleModeAdd(void)
             selectedNode = -1;
             return;
         }
+
+        // TODO: remove node instead
         TraceLog(LOG_INFO, "Edge %d -> %d already exists", selectedNode, nearest);
         selectedNode = -1;
     }
@@ -189,7 +191,7 @@ static void ThreadStep(void)
     {
         // TODO: make this configurable (slider)
         usleep(500000);
-        return;
+        if (state.autoActive) return;
     }
     pthread_mutex_lock(&stepMutex);
     pthread_cond_wait(&stepCond, &stepMutex);
@@ -202,27 +204,28 @@ static void *GraphBFSThread(void *arg)
     TraceLog(LOG_INFO, "BFS started");
     int root = selectedNode;
     selectedNode = -1;
-    List *queue = ListCreate();
+    List *queue = ListCreate(); // visit their adjacent
     graph->nodes[root].visited = true;
     TraceLog(LOG_INFO, "BFS visited %d (root)", root);
-    ThreadStep();
     ListAppend(queue, INT_ELEM(root));
     while (ListSize(queue) > 0)
     {
-        int adj = ListRemoveFirst(queue).i;
-        GraphEdge *edge = graph->nodes[adj].first;
-        while (edge)
+        int node = ListRemoveFirst(queue).i;
+        GraphEdge *adjEdge = graph->nodes[node].first;
+        while (adjEdge)
         {
-            GraphNode *node = &graph->nodes[edge->node];
-            if (!node->visited)
+            GraphNode *adjNode = &graph->nodes[adjEdge->node];
+            if (adjNode->visited)
             {
-                node->visited = true;
-                edge->visited = true;
-                TraceLog(LOG_INFO, "BFS visited %d", edge->node);
-                ListAppend(queue, INT_ELEM(edge->node));
-                ThreadStep();
+                adjEdge = adjEdge->next;
+                continue;
             }
-            edge = edge->next;
+            ThreadStep();
+            adjNode->visited = true;
+            adjEdge->visited = true;
+            TraceLog(LOG_INFO, "BFS visited %d", adjEdge->node);
+            ListAppend(queue, INT_ELEM(adjEdge->node));
+            adjEdge = adjEdge->next;
         }
     }
     ListDestroy(queue);
@@ -231,36 +234,40 @@ static void *GraphBFSThread(void *arg)
     return NULL;
 }
 
+
+static void DFSThreadRec(GraphEdge *edge)
+{
+    GraphNode *node = &graph->nodes[edge->node];
+    node->visited = true;
+    edge->visited = true;
+    TraceLog(LOG_INFO, "DFS visited %d", edge->node);
+    GraphEdge *adjEdge = node->first;
+    while (adjEdge)
+    {
+        GraphNode *adjNode = &graph->nodes[adjEdge->node];
+        if (adjNode->visited)
+        {
+            adjEdge = adjEdge->next;
+            continue;
+        }
+        ThreadStep();
+        DFSThreadRec(adjEdge);
+        adjEdge = adjEdge->next;
+    }
+}
+
 static void *GraphDFSThread(void *arg)
 {
     GraphClearVisited(graph);
     TraceLog(LOG_INFO, "DFS started");
     int root = selectedNode;
     selectedNode = -1;
-    List *stack = ListCreate();
-    ListPrepend(stack, INT_ELEM(root));
-    while (ListSize(stack) > 0)
-    {
-        int adj = ListRemoveFirst(stack).i;
-        GraphNode *node = &graph->nodes[adj];
-        if (node->visited) continue;
-        node->visited = true;
-        TraceLog(LOG_INFO, "DFS visited %d", adj);
-        ThreadStep();
-        GraphEdge *edge = node->first;
-        while (edge)
-        {
-            if (!graph->nodes[edge->node].visited)
-            {
-                ListPrepend(stack, INT_ELEM(edge->node));
-            }
-            edge = edge->next;
-        }
-    }
-    ListDestroy(stack);
+    GraphEdge rootEdge = { .visited = false, .node = root, .next = NULL };
+    DFSThreadRec(&rootEdge);
     TraceLog(LOG_INFO, "DFS finished");
     threadActive = false;
     return NULL;
+
 }
 
 static void DispatchThread(void)

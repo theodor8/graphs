@@ -17,7 +17,7 @@ typedef struct
 {
     bool visited;
     float x, y;
-    GraphEdge *first, *last;
+    GraphEdge *first, *last; // adj list
 } GraphNode;
 
 typedef struct
