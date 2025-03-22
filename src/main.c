@@ -204,13 +204,13 @@ static void *GraphBFSThread(void *arg)
     TraceLog(LOG_INFO, "BFS started");
     int root = selectedNode;
     selectedNode = -1;
-    List *queue = ListCreate(); // visit their adjacent
+    Queue *queue = QueueCreate(); // visit their adjacent
     graph->nodes[root].visited = true;
     TraceLog(LOG_INFO, "BFS visited %d (root)", root);
-    ListAppend(queue, INT_ELEM(root));
-    while (ListSize(queue) > 0)
+    QueueEnqueue(queue, INT_ELEM(root));
+    while (QueueSize(queue) > 0)
     {
-        int node = ListRemoveFirst(queue).i;
+        int node = QueueDequeue(queue).i;
         GraphEdge *adjEdge = graph->nodes[node].first;
         while (adjEdge)
         {
@@ -224,11 +224,11 @@ static void *GraphBFSThread(void *arg)
             adjNode->visited = true;
             adjEdge->visited = true;
             TraceLog(LOG_INFO, "BFS visited %d", adjEdge->node);
-            ListAppend(queue, INT_ELEM(adjEdge->node));
+            QueueEnqueue(queue, INT_ELEM(adjEdge->node));
             adjEdge = adjEdge->next;
         }
     }
-    ListDestroy(queue);
+    QueueDestroy(queue);
     TraceLog(LOG_INFO, "BFS finished");
     threadActive = false;
     return NULL;

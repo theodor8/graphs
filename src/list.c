@@ -7,11 +7,11 @@
 typedef struct Node Node;
 struct Node
 {
-    ListElem elem;
+    Elem elem;
     Node *next;
 };
 
-static Node *NodeCreate(ListElem elem, Node *next)
+static Node *NodeCreate(Elem elem, Node *next)
 {
     Node *node = calloc(1, sizeof(Node));
     node->elem = elem;
@@ -54,7 +54,7 @@ size_t ListSize(List *list)
     return list->size;
 }
 
-void ListPrepend(List *list, ListElem elem)
+void ListPrepend(List *list, Elem elem)
 {
     Node *node = NodeCreate(elem, list->first);
     if (list->first)
@@ -69,7 +69,7 @@ void ListPrepend(List *list, ListElem elem)
     }
     list->size++;
 }
-void ListAppend(List *list, ListElem elem)
+void ListAppend(List *list, Elem elem)
 {
     Node *node = NodeCreate(elem, NULL);
     if (list->last)
@@ -88,7 +88,7 @@ void ListAppend(List *list, ListElem elem)
 
 
 
-ListElem ListRemoveFirst(List *list)
+Elem ListRemoveFirst(List *list)
 {
     assert(list->first != NULL);
     Node *node = list->first;
@@ -98,26 +98,26 @@ ListElem ListRemoveFirst(List *list)
         assert(list->size == 1 && list->first == NULL);
         list->last = NULL;
     }
-    ListElem elem = node->elem;
+    Elem elem = node->elem;
     NodeDestroy(node);
     list->size--;
     return elem;
 }
 
 
-ListElem ListGetFirst(List *list)
+Elem ListGetFirst(List *list)
 {
     assert(list->first != NULL);
     return list->first->elem;
 }
 
-ListElem ListGetLast(List *list)
+Elem ListGetLast(List *list)
 {
     assert(list->last != NULL);
     return list->last->elem;
 }
 
-void ListApply(List *list, void (*f)(size_t, ListElem *))
+void ListApply(List *list, void (*f)(size_t, Elem *))
 {
     Node *node = list->first;
     size_t i = 0;
@@ -152,10 +152,58 @@ bool IterHasNext(Iter *iter)
     return iter->next != NULL;
 }
 
-ListElem IterNext(Iter *iter)
+Elem IterNext(Iter *iter)
 {
     assert(iter->next != NULL);
-    ListElem elem = iter->next->elem;
+    Elem elem = iter->next->elem;
     iter->next = iter->next->next;
     return elem;
 }
+
+
+Queue *QueueCreate(void)
+{
+    return (Queue *)ListCreate();
+}
+void QueueDestroy(Queue *queue)
+{
+    ListDestroy((List *)queue);
+}
+size_t QueueSize(Queue *queue)
+{
+    return ListSize((List *)queue);
+}
+void QueueEnqueue(Queue *queue, Elem elem)
+{
+    ListAppend((List *)queue, elem);
+}
+Elem QueueDequeue(Queue *queue)
+{
+    return ListRemoveFirst((List *)queue);
+}
+
+
+Stack *StackCreate(void)
+{
+    return (Stack *)ListCreate();
+}
+void StackDestroy(Stack *stack)
+{
+    ListDestroy((List *)stack);
+}
+size_t StackSize(Stack *stack)
+{
+    return ListSize((List *)stack);
+}
+void StackPush(Stack *stack, Elem elem)
+{
+    ListPrepend((List *)stack, elem);
+}
+Elem StackPop(Stack *stack)
+{
+    return ListRemoveFirst((List *)stack);
+}
+
+
+
+
