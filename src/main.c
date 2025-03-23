@@ -4,15 +4,25 @@
 
 
 #define RAYGUI_IMPLEMENTATION
-#include "raygui.h"
+#include "raygui/raygui.h"
 
 #define GUI_LAYOUT_IMPLEMENTATION
-#include "gui_layout.h"
+#include "raygui/gui_layout.h"
 
 #include "raylib.h"
 #include "raymath.h"
 
-#include "style_cyber.h"
+#include "styles/style_jungle.h"            // raygui style: jungle
+#include "styles/style_candy.h"             // raygui style: candy
+#include "styles/style_lavanda.h"           // raygui style: lavanda
+#include "styles/style_cyber.h"             // raygui style: cyber
+#include "styles/style_terminal.h"          // raygui style: terminal
+#include "styles/style_ashes.h"             // raygui style: ashes
+#include "styles/style_bluish.h"            // raygui style: bluish
+#include "styles/style_dark.h"              // raygui style: dark
+#include "styles/style_cherry.h"            // raygui style: cherry
+#include "styles/style_sunny.h"             // raygui style: sunny
+#include "styles/style_enefete.h"           // raygui style: enefete
 
 #include "graph.h"
 #include "list.h"
