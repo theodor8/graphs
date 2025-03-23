@@ -1,2 +1,3 @@
-# Graph
- 
+## Graph Traversal Visualization
+
+![alt text](image.png)
