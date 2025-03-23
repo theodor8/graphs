@@ -38,8 +38,9 @@ typedef struct {
     bool startPressed;
     bool stepPressed;
     bool autoActive;
+    float autoSpeedValue;
 
-    Rectangle layoutRecs[8];
+    Rectangle layoutRecs[9];
 
     // Custom state variables (depend on development software)
     // NOTE: This variables should be added manually if required
@@ -105,6 +106,7 @@ GuiLayoutState InitGuiLayout(void)
     state.startPressed = false;
     state.stepPressed = false;
     state.autoActive = true;
+    state.autoSpeedValue = 0.0f;
 
     state.layoutRecs[0] = (Rectangle){ 32, 32, 240, 344 };
     state.layoutRecs[1] = (Rectangle){ 40, 40, 72, 32 };
@@ -114,6 +116,7 @@ GuiLayoutState InitGuiLayout(void)
     state.layoutRecs[5] = (Rectangle){ 160, 152, 104, 32 };
     state.layoutRecs[6] = (Rectangle){ 40, 200, 104, 32 };
     state.layoutRecs[7] = (Rectangle){ 160, 200, 104, 32 };
+    state.layoutRecs[8] = (Rectangle){ 160, 248, 104, 24 };
 
     // Custom variables initialization
 
@@ -131,6 +134,7 @@ void GuiLayout(GuiLayoutState *state)
     state->startPressed = GuiButton(state->layoutRecs[5], "START"); 
     state->stepPressed = GuiButton(state->layoutRecs[6], "STEP"); 
     GuiToggle(state->layoutRecs[7], "AUTO", &state->autoActive);
+    GuiSliderBar(state->layoutRecs[8], "AUTO SPEED", NULL, &state->autoSpeedValue, 0, 100);
     if (GuiDropdownBox(state->layoutRecs[4], "BFS;DFS", &state->algoActive, state->algoEditMode)) state->algoEditMode = !state->algoEditMode;
     
     GuiUnlock();

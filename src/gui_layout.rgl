@@ -1,7 +1,7 @@
 #
 # rgl layout text file (v4.0) - raygui layout file generated using rGuiLayout
 #
-# Number of controls:     8
+# Number of controls:     9
 #
 # Ref. window:    r <x> <y> <width> <height>
 # Anchor info:    a <id> <name> <posx> <posy> <enabled>
@@ -17,3 +17,4 @@ c 004 11 algo 8 120 104 32 1 BFS;DFS
 c 005 5 start 128 120 104 32 1 START
 c 006 5 step 8 168 104 32 1 STEP
 c 007 8 auto 128 168 104 32 1 AUTO
+c 008 17 autoSpeed 128 216 104 24 1 AUTO SPEED

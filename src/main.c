@@ -189,8 +189,8 @@ static void ThreadStep(void)
 {
     if (state.autoActive)
     {
-        // TODO: make this configurable (slider)
-        usleep(500000);
+        int delay = 1100000 - state.autoSpeedValue  * 10000;
+        usleep(delay);
         if (state.autoActive) return;
     }
     pthread_mutex_lock(&stepMutex);
@@ -263,7 +263,7 @@ static void *GraphDFSThread(void *arg)
     int root = selectedNode;
     selectedNode = -1;
     GraphEdge rootEdge = { .visited = false, .node = root, .next = NULL };
-    DFSThreadRec(&rootEdge);
+    DFSThreadRec(&rootEdge); // TODO: change dfs to non recursive
     TraceLog(LOG_INFO, "DFS finished");
     threadActive = false;
     return NULL;
@@ -274,6 +274,7 @@ static void DispatchThread(void)
 {
     if (threadActive)
     {
+        // TODO: cancel running thread
         TraceLog(LOG_WARNING, "Thread already active");
         return;
     }
@@ -316,6 +317,9 @@ int main(void)
 
     state = InitGuiLayout();
     controlPanelRec = state.layoutRecs[0];
+    state.modeActive = 1;
+    state.autoActive = false;
+    state.autoSpeedValue = 50;
 
 
     graph = GraphCreate();
